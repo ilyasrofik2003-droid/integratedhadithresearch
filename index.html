@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <title>Dahlan Scholar - Riset Hadis & Jurnal Islam Berbasis AI</title>
+    
+    <meta name="description" content="Aplikasi riset hadis & jurnal Islam berbasis AI. Fitur Takhrij otomatis, Pohon Sanad, dan pencarian referensi Kitab/Jurnal terintegrasi untuk mahasiswa dan peneliti.">
+    
+    <meta name="keywords" content="dahlan scholar, pencari hadis, takhrij hadis online, pohon sanad generator, riset jurnal islam, ilyas rofik, aplikasi hadis ai, referensi makalah islam">
+    
+    <meta name="author" content="Ilyas Rofik">
+    <meta name="robots" content="index, follow">
+
+    <meta property="og:title" content="Dahlan Scholar - Riset Hadis & Jurnal AI">
+    <meta property="og:description" content="Temukan sanad lengkap, takhrij otomatis, dan referensi jurnal ilmiah dalam satu klik.">
+    <meta property="og:type" content="website">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        h1, h2, h3 { font-family: 'Playfair Display', serif; }
+        .arabic-text { font-family: 'Amiri', serif; }
+        
+        /* SCROLL FIX ABSOLUT */
+        .scroller {
+            height: calc(100vh - 170px); 
+            overflow-y: auto !important;
+            padding-bottom: 100px;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .markdown-body h1, .markdown-body h2 { font-weight: bold; margin-top: 1em; margin-bottom: 0.5em; color: #065f46; }
+        .markdown-body ul { padding-left: 1.2em; list-style-type: disc; }
+        .markdown-body li { margin-bottom: 0.5em; line-height: 1.6; }
+        
+        .ref-btn {
+            display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; padding: 2px 8px;
+            background-color: #ecfdf5; border: 1px solid #6ee7b7; color: #047857; border-radius: 99px;
+            font-size: 10px; font-weight: bold; cursor: pointer; transition: all 0.2s;
+        }
+        
+        .hadith-card { transition: all 0.2s; border: 1px solid #e2e8f0; }
+        .hadith-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .hadith-card.selected { border: 2px solid #059669; background-color: #ecfdf5; position: relative; }
+        
+        /* Takhrij Table Styles V20 (Jami' Style) */
+        .takhrij-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        .takhrij-table th { background-color: #f8fafc; color: #475569; padding: 10px; text-align: left; border-bottom: 2px solid #e2e8f0; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.7rem; }
+        .takhrij-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; color: #334155; vertical-align: top; }
+        .takhrij-table tr:hover { background-color: #f8fafc; }
+        
+        /* Badges Status */
+        .badge { padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 0.65rem; display: inline-block; text-transform: uppercase; }
+        .badge-ashl { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; } /* Hijau */
+        .badge-mutaba { background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; } /* Biru */
+        .badge-syahid { background-color: #fef9c3; color: #854d0e; border: 1px solid #fde047; } /* Kuning */
+        
+        /* Hukum Grading */
+        .hukum-sahih { color: #059669; font-weight: bold; }
+        .hukum-hasan { color: #d97706; font-weight: bold; }
+        .hukum-daif { color: #dc2626; font-weight: bold; }
+        
+        .matan-cell { font-family: 'Amiri', serif; font-size: 1rem; text-align: right; direction: rtl; line-height: 1.5; color: #1e293b; min-width: 150px; }
+        
+        .btn-dorar {
+            background-color: #15803d; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;
+            display: inline-flex; align-items: center; gap: 4px; text-decoration: none; transition: background 0.2s;
+        }
+        .btn-dorar:hover { background-color: #166534; }
+
+        #mermaidOutput { overflow: auto; min-height: 300px; display: flex; justify-content: center; background: #fafafa; border-radius: 8px; border: 1px solid #eee; padding: 10px; }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col text-slate-800">
+
+    <nav class="bg-emerald-900 text-white shadow-md z-50 flex-none h-16">
+        <div class="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-white/10 p-1.5 rounded-lg"><i class="fa-solid fa-graduation-cap text-emerald-200 text-lg"></i></div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight leading-none">Dahlan Scholar</h1>
+                    <p class="text-[10px] text-emerald-200 font-light uppercase tracking-wide">Integrated Hadith Research</p>
+                </div>
+            </div>
+            <button onclick="toggleSettings()" class="text-emerald-100 p-2 hover:bg-emerald-700 rounded-full transition"><i class="fa-solid fa-gear text-lg"></i></button>
+        </div>
+    </nav>
+
+    <div class="bg-white border-b border-slate-200 p-4 shadow-sm z-40 flex-none">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row gap-3">
+            <div class="relative flex-1">
+                <input type="text" id="researchTopic" placeholder="Masukkan Topik Riset (Contoh: Sabar, Niat, Pendidikan)..." class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block p-3 pr-10 shadow-inner">
+            </div>
+            <button id="btnStart" onclick="startResearch()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-medium rounded-lg text-sm px-6 py-3 shadow-md flex items-center justify-center gap-2 active:scale-95 transition-transform whitespace-nowrap">
+                <i class="fa-solid fa-magnifying-glass"></i> Mulai Riset
+            </button>
+        </div>
+    </div>
+
+    <main class="flex-1 w-full max-w-7xl mx-auto lg:p-4 overflow-hidden">
+        <div class="h-full w-full lg:grid lg:grid-cols-12 lg:gap-4">
+
+            <div id="initialState" class="absolute inset-0 flex flex-col items-center justify-center p-8 text-center text-slate-400 z-0 bg-slate-50 lg:bg-transparent pointer-events-none">
+                <div class="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mb-4"><i class="fa-solid fa-layer-group text-3xl text-emerald-600"></i></div>
+                <h3 class="text-slate-700 font-bold text-lg">Sistem Terintegrasi</h3>
+                <p class="text-sm mt-2 max-w-xs text-slate-500">Pilih hadis lengkap dengan Sanad, buat kerangka otomatis/upload PDF.</p>
+            </div>
+
+            <div class="hidden lg:flex col-span-7 flex-col h-full bg-white lg:rounded-xl lg:shadow-sm lg:border lg:border-slate-200 overflow-hidden relative z-10">
+                <div class="flex border-b border-slate-200 bg-slate-50 flex-none overflow-x-auto">
+                    <button onclick="viewLeft('outline')" id="btnTabOutline" class="flex-1 min-w-[90px] py-3 text-xs font-bold text-emerald-700 border-b-2 border-emerald-700 bg-white">KERANGKA</button>
+                    <button onclick="viewLeft('sanad')" id="btnTabSanad" class="flex-1 min-w-[90px] py-3 text-xs font-medium text-slate-500 hover:text-emerald-700">POHON SANAD</button>
+                    <button onclick="viewLeft('takhrij')" id="btnTabTakhrij" class="flex-1 min-w-[90px] py-3 text-xs font-medium text-slate-500 hover:text-emerald-700">TAKHRIJ</button>
+                </div>
+
+                <div id="viewOutline" class="scroller p-5">
+                    <div class="mb-4 flex flex-col gap-2 p-3 bg-slate-50 rounded border border-slate-200">
+                        <label class="text-xs font-bold text-slate-700">Sumber Kerangka:</label>
+                        <div class="flex gap-2">
+                            <button onclick="setOutlineMode('auto')" id="btnModeAuto" class="flex-1 py-1.5 text-xs border rounded bg-emerald-600 text-white border-emerald-600">Otomatis (Jurnal)</button>
+                            <button onclick="setOutlineMode('manual')" id="btnModeManual" class="flex-1 py-1.5 text-xs border rounded bg-white text-slate-600 hover:bg-slate-100">Manual Teks</button>
+                            <button onclick="setOutlineMode('pdf')" id="btnModePdf" class="flex-1 py-1.5 text-xs border rounded bg-white text-slate-600 hover:bg-slate-100">Upload PDF</button>
+                        </div>
+                        
+                        <div id="outlineInputManual" class="hidden mt-2">
+                            <textarea id="manualOutlineText" rows="4" class="w-full text-xs p-2 border rounded" placeholder="Paste kerangka/poin-poin Makalah, Skripsi, atau Artikel di sini..."></textarea>
+                            <button onclick="processCustomOutline('text')" class="mt-2 w-full py-2 bg-slate-700 text-white text-xs rounded hover:bg-slate-800">Konversi ke Standar Baku</button>
+                        </div>
+
+                        <div id="outlineInputPdf" class="hidden mt-2">
+                            <input type="file" id="pdfInput" accept="application/pdf" class="w-full text-xs p-2 border rounded bg-white">
+                            <button onclick="processCustomOutline('pdf')" class="mt-2 w-full py-2 bg-slate-700 text-white text-xs rounded hover:bg-slate-800">Konversi PDF ke Standar Baku</button>
+                            <p class="text-[10px] text-slate-500 mt-1">*Pastikan PDF berisi teks (bukan scan gambar).</p>
+                        </div>
+                    </div>
+
+                    <div id="outlineContainer" class="markdown-body text-sm pb-10">
+                        <div class="text-center text-slate-400 text-sm mt-10">Kerangka akan muncul di sini...</div>
+                    </div>
+                </div>
+
+                <div id="viewSanad" class="scroller hidden p-4">
+                    <div class="bg-blue-50 border border-blue-200 text-blue-800 px-3 py-2 rounded mb-3 text-xs">
+                        <i class="fa-solid fa-info-circle mr-1"></i> Hadis di bawah ini telah dicarikan yang memuat <strong>Sanad Lengkap (Full Chain)</strong> agar pohon sanad tidak terputus.
+                    </div>
+                    <div id="hadithSelectorSanad" class="mb-4"></div>
+                    <div id="sanadControls" class="hidden space-y-3">
+                        <div class="p-3 bg-emerald-50 rounded border border-emerald-100">
+                            <button onclick="generateMermaid()" class="w-full bg-emerald-600 text-white text-xs font-bold py-2 rounded shadow hover:bg-emerald-700"><i class="fa-solid fa-sitemap mr-1"></i> GAMBAR POHON SANAD</button>
+                        </div>
+                        <div id="mermaidOutput"></div>
+                    </div>
+                </div>
+
+                <div id="viewTakhrij" class="scroller hidden p-4">
+                    <div id="hadithSelectorTakhrij" class="mb-4"></div>
+                    <div id="takhrijControls" class="hidden space-y-3">
+                        <div class="p-3 bg-amber-50 rounded border border-amber-100">
+                            <p class="text-xs text-amber-800 mb-2 font-bold">Generator Takhrij</p>
+                            <button onclick="generateTakhrij()" class="w-full bg-amber-600 text-white text-xs font-bold py-2 rounded shadow hover:bg-amber-700"><i class="fa-solid fa-layer-group mr-1"></i> ANALISIS TAKHRIJ (METODE JAMI')</button>
+                            <p class="text-[10px] text-amber-700 mt-1 italic">*Mengelompokkan Ashl (Pokok), Mutaba'at, dan Syawahid.</p>
+                        </div>
+                        <div id="takhrijOutput" class="hidden mt-4 overflow-x-auto bg-white rounded border border-slate-200 shadow-sm"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hidden lg:flex col-span-5 flex-col h-full bg-white lg:rounded-xl lg:shadow-sm lg:border lg:border-slate-200 overflow-hidden relative z-10">
+                <div class="flex border-b border-slate-200 bg-slate-50 flex-none z-20 overflow-x-auto">
+                    <button id="tabKitab" onclick="switchTab('kitab')" class="flex-1 min-w-[70px] py-3 text-xs font-bold text-emerald-600 border-b-2 border-emerald-600 bg-white transition">KITAB</button>
+                    <button id="tabJurnal" onclick="switchTab('jurnal')" class="flex-1 min-w-[70px] py-3 text-xs font-medium text-slate-500 hover:text-emerald-600 transition">JURNAL</button>
+                    <button id="tabBuku" onclick="switchTab('buku')" class="flex-1 min-w-[70px] py-3 text-xs font-medium text-slate-500 hover:text-emerald-600 transition">BUKU</button>
+                </div>
+
+                <div id="kitabFilterBar" class="p-2 bg-slate-50 border-b border-slate-200 flex gap-2 flex-none">
+                    <select id="sourceSelector" onchange="refreshKitab()" class="flex-1 bg-white border border-slate-300 text-slate-700 text-xs rounded p-1.5 font-medium">
+                        <option value="all">🔍 Semua Sumber</option>
+                        <option value="dorar">📚 Dorar.net</option>
+                        <option value="shamela">📖 Shamela.ws</option>
+                    </select>
+                </div>
+
+                <div class="scroller relative">
+                    <div id="arabKeywordDisplay" class="hidden p-2 bg-amber-50 text-amber-800 text-[10px] text-center border-b border-amber-100 dir-rtl arabic-text sticky top-0 z-10"></div>
+                    
+                    <div id="listKitabContainer">
+                        <div id="listKitab" class="divide-y divide-slate-100 bg-white"></div>
+                        <div id="btnMoreKitab" class="hidden p-4"><button onclick="loadMore('kitab')" class="w-full py-2 text-xs border rounded font-bold hover:bg-slate-50">Muat Lagi</button></div>
+                    </div>
+
+                    <div id="listJurnalContainer" class="hidden">
+                        <div id="listJurnal" class="divide-y divide-slate-100 bg-white"></div>
+                        <div id="btnMoreJurnal" class="hidden p-4"><button onclick="loadMore('jurnal')" class="w-full py-2 text-xs border rounded font-bold hover:bg-slate-50">Muat Lagi</button></div>
+                    </div>
+
+                    <div id="listBukuContainer" class="hidden">
+                        <div id="listBuku" class="divide-y divide-slate-100 bg-white"></div>
+                        <div id="btnMoreBuku" class="hidden p-4"><button onclick="loadMore('buku')" class="w-full py-2 text-xs border rounded font-bold hover:bg-slate-50">Muat Lagi</button></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <textarea id="selectedSanadRaw" class="hidden"></textarea>
+    
+    <div id="settingsModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="bg-emerald-900 text-white p-3 flex justify-between items-center"><h3 class="font-bold text-sm">Pengaturan API</h3><button onclick="toggleSettings()"><i class="fa-solid fa-xmark"></i></button></div>
+            <div class="p-4 space-y-3 text-xs">
+                <input type="password" id="inputGeminiKey" placeholder="Gemini API Key" class="w-full border p-2 rounded">
+                <input type="password" id="inputGoogleKey" placeholder="Google Search API Key" class="w-full border p-2 rounded">
+                <input type="text" id="inputCxId" placeholder="Search Engine ID (CX)" class="w-full border p-2 rounded">
+                <button onclick="saveSettings()" class="w-full bg-emerald-700 text-white py-2 rounded font-bold hover:bg-emerald-800">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'loose' });
+        const LS_KEYS = { GEMINI: 'fai_gemini_key', GOOGLE: 'fai_google_key', CX: 'fai_cx_id' };
+        let searchState = { topic: '', arabKeyword: '', kitab: {s:1}, jurnal: {s:1}, buku: {s:1}, outlineMode: 'auto' };
+
+        const els = {
+            topic: document.getElementById('researchTopic'),
+            initialState: document.getElementById('initialState'),
+            outlineContainer: document.getElementById('outlineContainer'),
+            arabKeywordDisplay: document.getElementById('arabKeywordDisplay'),
+            viewOutline: document.getElementById('viewOutline'),
+            viewSanad: document.getElementById('viewSanad'),
+            viewTakhrij: document.getElementById('viewTakhrij'),
+            hadithSelectorSanad: document.getElementById('hadithSelectorSanad'),
+            hadithSelectorTakhrij: document.getElementById('hadithSelectorTakhrij'),
+            sanadControls: document.getElementById('sanadControls'),
+            takhrijControls: document.getElementById('takhrijControls'),
+            mermaidOutput: document.getElementById('mermaidOutput'),
+            takhrijOutput: document.getElementById('takhrijOutput'),
+            selectedSanadRaw: document.getElementById('selectedSanadRaw'),
+            btnModeAuto: document.getElementById('btnModeAuto'),
+            btnModeManual: document.getElementById('btnModeManual'),
+            btnModePdf: document.getElementById('btnModePdf'),
+            outlineInputManual: document.getElementById('outlineInputManual'),
+            outlineInputPdf: document.getElementById('outlineInputPdf'),
+            manualOutlineText: document.getElementById('manualOutlineText'),
+            pdfInput: document.getElementById('pdfInput')
+        };
+
+        window.onload = () => { ['inputGeminiKey', 'inputGoogleKey', 'inputCxId'].forEach((id, i) => document.getElementById(id).value = localStorage.getItem(Object.values(LS_KEYS)[i]) || ''); }
+        window.toggleSettings = () => document.getElementById('settingsModal').classList.toggle('hidden');
+        window.saveSettings = () => {
+            localStorage.setItem(LS_KEYS.GEMINI, document.getElementById('inputGeminiKey').value.trim());
+            localStorage.setItem(LS_KEYS.GOOGLE, document.getElementById('inputGoogleKey').value.trim());
+            localStorage.setItem(LS_KEYS.CX, document.getElementById('inputCxId').value.trim());
+            alert('Tersimpan!'); toggleSettings();
+        }
+        function getKeys() { return { gemini: localStorage.getItem(LS_KEYS.GEMINI), google: localStorage.getItem(LS_KEYS.GOOGLE), cx: localStorage.getItem(LS_KEYS.CX) }; }
+
+        // --- CORE LOGIC ---
+        window.startResearch = async () => {
+            const topic = els.topic.value.trim(); const keys = getKeys();
+            if(!topic || !keys.gemini) return alert('Isi topik dan API Key.');
+            
+            els.initialState.classList.add('hidden');
+            searchState = { ...searchState, topic, arabKeyword: '', kitab: {s:1}, jurnal: {s:1}, buku: {s:1} };
+            
+            ['listKitab','listJurnal','listBuku'].forEach(id => document.getElementById(id).innerHTML = "");
+            ['btnMoreKitab','btnMoreJurnal','btnMoreBuku'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            
+            viewLeft('outline');
+            switchTab('kitab');
+
+            findHadithCandidates(topic, keys);
+            
+            if(searchState.outlineMode === 'auto') {
+                els.outlineContainer.innerHTML = '<div class="text-center p-4 text-emerald-600"><i class="fa-solid fa-circle-notch fa-spin"></i> Menyusun kerangka Artikel Jurnal...</div>';
+                generateOutline(topic, keys.gemini);
+            }
+
+            await translateAndSearch(topic, keys); 
+            executeSearch('jurnal', keys, true);   
+            executeSearch('buku', keys, true);     
+        }
+
+        // --- OUTLINE MODE ---
+        window.setOutlineMode = (mode) => {
+            searchState.outlineMode = mode;
+            [els.btnModeAuto, els.btnModeManual, els.btnModePdf].forEach(b => { b.classList.remove('bg-emerald-600', 'text-white'); b.classList.add('bg-white', 'text-slate-600'); });
+            const activeBtn = mode === 'auto' ? els.btnModeAuto : mode === 'manual' ? els.btnModeManual : els.btnModePdf;
+            activeBtn.classList.remove('bg-white', 'text-slate-600');
+            activeBtn.classList.add('bg-emerald-600', 'text-white');
+
+            els.outlineInputManual.classList.toggle('hidden', mode !== 'manual');
+            els.outlineInputPdf.classList.toggle('hidden', mode !== 'pdf');
+
+            if(mode === 'auto' && searchState.topic) {
+                els.outlineContainer.innerHTML = '<div class="text-center p-4 text-emerald-600"><i class="fa-solid fa-circle-notch fa-spin"></i> Menyusun kerangka Artikel Jurnal...</div>';
+                generateOutline(searchState.topic, getKeys().gemini);
+            }
+        }
+
+        window.processCustomOutline = async (type) => {
+            const keys = getKeys();
+            if(!keys.gemini) return alert("API Key diperlukan");
+            els.outlineContainer.innerHTML = '<div class="text-center p-4 text-emerald-600"><i class="fa-solid fa-circle-notch fa-spin"></i> Menganalisis & Mengonversi ke Standar Baku...</div>';
+
+            let promptContext = "", inlineData = null;
+
+            if (type === 'text') {
+                const txt = els.manualOutlineText.value.trim();
+                if(!txt) return alert("Masukkan teks kerangka.");
+                promptContext = `Berikut adalah input teks dari user: "${txt}".`;
+            } else if (type === 'pdf') {
+                const file = els.pdfInput.files[0];
+                if(!file) return alert("Pilih file PDF.");
+                const base64Data = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+                promptContext = "Berikut adalah dokumen PDF yang diunggah user.";
+                inlineData = { mimeType: "application/pdf", data: base64Data };
+            }
+
+            const prompt = `
+            ${promptContext}
+            PERAN: Editor Akademik.
+            TUGAS:
+            1. Analisis isi. IDENTIFIKASI apakah ini bahan: **MAKALAH**, **ARTIKEL JURNAL**, atau **SKRIPSI**.
+            2. STRUKTUR ULANG isinya agar SAMA PERSIS dengan STANDAR BAKU tipe tersebut.
+            3. JANGAN MERUBAH SUBSTANSI, hanya format.
+            4. Format output: Markdown Bullet Points.
+            5. Footer: "**Jenis Kerangka Terdeteksi: [JENIS] - Dikonversi ke Standar Baku**".
+            `;
+
+            try {
+                const body = { contents: [{ parts: [{ text: prompt }] }] };
+                if(inlineData) body.contents[0].parts.push({ inlineData: inlineData });
+
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${keys.gemini}`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                let rawMd = data.candidates[0].content.parts[0].text;
+                let md = marked.parse(rawMd);
+                md = md.replace(/<\/li>/g, ' <button class="ref-btn" onclick="searchRef(this)"><i class="fa-solid fa-search"></i> Cari Ref</button></li>');
+                els.outlineContainer.innerHTML = md;
+            } catch(e) {
+                els.outlineContainer.innerHTML = `<div class="text-red-500">Gagal memproses: ${e.message}</div>`;
+            }
+        }
+
+        // --- HADITH FINDER ---
+        window.findHadithCandidates = async function(topic, keys) {
+            const loading = '<div class="text-center p-4 bg-slate-50 border rounded"><i class="fa-solid fa-circle-notch fa-spin text-emerald-600"></i> <span class="text-xs">Mencari hadis dengan Sanad Lengkap...</span></div>';
+            els.hadithSelectorSanad.innerHTML = loading;
+            els.hadithSelectorTakhrij.innerHTML = loading;
+            els.sanadControls.classList.add('hidden');
+            els.takhrijControls.classList.add('hidden');
+
+            const prompt = `
+            Task: Find 3 authentic (sahih) hadiths related to: "${topic}".
+            CRITICAL: You MUST provide the FULL ARABIC SANAD (Narrator Chain).
+            OUTPUT VALID JSON ARRAY ONLY. Format: [{"kitab":"Bukhari/Muslim","arab":"...FULL SANAD + MATAN..."}]
+            `;
+            
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${keys.gemini}`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                const data = await res.json();
+                let txt = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+                const json = JSON.parse(txt.substring(txt.indexOf('['), txt.lastIndexOf(']')+1));
+                
+                let htm = '<label class="block text-xs font-bold text-slate-700 mb-2">Pilih Hadis (Klik untuk Mengaktifkan):</label>';
+                json.forEach((h) => {
+                    const clean = h.arab.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    htm += `<div onclick="selectGlobalHadith(this, '${clean}')" class="hadith-card p-3 rounded cursor-pointer bg-white mb-2 border border-slate-200">
+                        <div class="font-bold text-xs text-emerald-700 mb-1">📖 ${h.kitab}</div>
+                        <div class="text-xs arabic-text text-right text-slate-600 line-clamp-3 leading-loose">${h.arab}</div>
+                        <div class="text-[9px] text-slate-400 mt-1 italic">Termasuk sanad lengkap</div>
+                    </div>`;
+                });
+
+                els.hadithSelectorSanad.innerHTML = htm;
+                els.hadithSelectorTakhrij.innerHTML = htm;
+
+            } catch(e) {
+                const err = `<div class="text-red-500 text-xs">Gagal: ${e.message}</div>`;
+                els.hadithSelectorSanad.innerHTML = err;
+                els.hadithSelectorTakhrij.innerHTML = err;
+            }
+        }
+
+        window.selectGlobalHadith = function(el, text) {
+            const syncSelection = (containerId) => {
+                const container = document.getElementById(containerId);
+                Array.from(container.children).forEach(child => {
+                    if(child.tagName === 'DIV') {
+                        child.classList.remove('selected', 'border-emerald-500', 'bg-emerald-50');
+                        if(child.innerText === el.innerText) child.classList.add('selected', 'border-emerald-500', 'bg-emerald-50');
+                    }
+                });
+            };
+            syncSelection('hadithSelectorSanad');
+            syncSelection('hadithSelectorTakhrij');
+
+            els.selectedSanadRaw.value = text;
+            els.sanadControls.classList.remove('hidden');
+            els.takhrijControls.classList.remove('hidden');
+            els.mermaidOutput.innerHTML = "";
+            els.takhrijOutput.classList.add('hidden');
+            els.takhrijOutput.innerHTML = "";
+        }
+
+        window.generateMermaid = async function() {
+            const raw = els.selectedSanadRaw.value; const key = getKeys().gemini;
+            els.mermaidOutput.innerHTML = '<div class="text-center p-4"><i class="fa-solid fa-spinner fa-spin text-emerald-600"></i> Menganalisis Sanad Lengkap...</div>';
+            
+            const prompt = `Task: Extract ALL narrators from: "${raw}". Output JSON Array of strings. Top (Author) -> Down (Prophet). Ensure FULL chain.`;
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${key}`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                const data = await res.json();
+                let txt = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+                const names = JSON.parse(txt.substring(txt.indexOf('['), txt.lastIndexOf(']')+1));
+                
+                let code = "graph TD\nclassDef default fill:#fff,stroke:#059669,stroke-width:1px;\n";
+                names.forEach((n, i) => {
+                    const cleanName = n.replace(/"/g,"'").replace(/\(.*?\)/g, "").trim();
+                    let label = cleanName;
+                    if(i === names.length-1) label = `<b>${cleanName}</b><br>(Rasulullah)`;
+                    else if(i === names.length-2) label = `<b>${cleanName}</b><br>(Sahabat)`;
+                    else if(i === 0) label = `<b>${cleanName}</b><br>(Mukharrij)`;
+                    code += `N${i}["${label}"]`;
+                    if(i < names.length-1) code += ` --> N${i+1}`;
+                    code += "\n";
+                });
+                
+                const div = document.createElement('div'); div.className="w-full"; els.mermaidOutput.innerHTML = ""; els.mermaidOutput.appendChild(div);
+                const { svg } = await mermaid.render('g'+Date.now(), code); div.innerHTML = svg;
+            } catch(e) { els.mermaidOutput.innerHTML = "Gagal Visualisasi."; }
+        }
+
+        // --- TAKHRIJ V20 (Jami' Style Logic) ---
+        window.generateTakhrij = async function() {
+            const raw = els.selectedSanadRaw.value; const kw = searchState.arabKeyword; const key = getKeys().gemini;
+            els.takhrijOutput.classList.remove('hidden'); els.takhrijOutput.innerHTML = '<div class="p-4 text-center"><i class="fa-solid fa-spinner fa-spin text-emerald-600"></i> Mensimulasikan Metodologi Jami\' Khadim al-Haramain...</div>';
+            
+            const sUrl = `https://www.googleapis.com/customsearch/v1?key=${getKeys().google}&cx=${getKeys().cx}&q=${encodeURIComponent(kw+" site:dorar.net")}&num=10`;
+            
+            try {
+                const sRes = await fetch(sUrl); const sData = await sRes.json();
+                const snips = sData.items ? sData.items.map(i=>i.snippet).join("\n") : "No data.";
+                
+                const prompt = `
+                Berperanlah sebagai Ahli Hadis (Muhaddith) yang menggunakan metodologi aplikasi "Jami' Khadim al-Haramain".
+                
+                INPUT:
+                Hadis Utama: "${raw.substring(0,150)}..."
+                Data Pencarian: ${snips}
+
+                TUGAS:
+                Lakukan Takhrij dan Klasifikasikan hasilnya menjadi:
+                1. ASHL (Pokok): Hadis yang sama persis (Input).
+                2. MUTABA'AH: Hadis pendukung dari SAHABAT YANG SAMA (jalur lain).
+                3. SYAHID: Hadis pendukung dari SAHABAT YANG BERBEDA (makna serupa).
+
+                OUTPUT JSON ARRAY:
+                [
+                  {
+                    "status": "ASHL" atau "MUTABA'AH" atau "SYAHID",
+                    "imam": "Nama Imam",
+                    "kitab": "Nama Kitab",
+                    "hukum": "Hukum Hadis (Sahih/Hasan/Daif) - Ambil dari snippet jika ada, atau estimasi",
+                    "matan_bukti": "Potongan matan Arab pendek",
+                    "kunci_cari": "Potongan matan Arab UNIK untuk link Dorar"
+                  }
+                ]
+                `;
+
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${key}`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                const data = await res.json();
+                let txt = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+                const jsonData = JSON.parse(txt.substring(txt.indexOf('['), txt.lastIndexOf(']')+1));
+                
+                let tableHtml = `
+                <table class="takhrij-table">
+                    <thead>
+                        <tr>
+                            <th width="15%">Status</th>
+                            <th width="20%">Mukharrij/Kitab</th>
+                            <th width="15%">Hukum</th>
+                            <th width="35%" class="text-right">Matan/Bukti</th>
+                            <th width="15%">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+                
+                jsonData.forEach(item => {
+                    let badgeClass = "badge-ashl";
+                    if(item.status.includes("MUTABA")) badgeClass = "badge-mutaba";
+                    if(item.status.includes("SYAHID")) badgeClass = "badge-syahid";
+
+                    let hukumClass = "text-slate-600";
+                    if(item.hukum.toLowerCase().includes("sahih")) hukumClass = "hukum-sahih";
+                    else if(item.hukum.toLowerCase().includes("hasan")) hukumClass = "hukum-hasan";
+                    else if(item.hukum.toLowerCase().includes("daif")) hukumClass = "hukum-daif";
+
+                    const directLink = `https://dorar.net/hadith/search?q=${encodeURIComponent(item.kunci_cari)}&st=p&xclude=`;
+                    
+                    tableHtml += `
+                    <tr>
+                        <td><span class="badge ${badgeClass}">${item.status}</span></td>
+                        <td>
+                            <div class="font-bold text-slate-800">${item.imam}</div>
+                            <div class="text-[10px] text-slate-500">${item.kitab}</div>
+                        </td>
+                        <td class="text-xs ${hukumClass}">${item.hukum}</td>
+                        <td class="matan-cell">${item.matan_bukti}</td>
+                        <td>
+                            <a href="${directLink}" target="_blank" class="btn-dorar">
+                                <i class="fa-solid fa-up-right-from-square"></i> Dorar
+                            </a>
+                        </td>
+                    </tr>`;
+                });
+                
+                tableHtml += `</tbody></table>`;
+                els.takhrijOutput.innerHTML = tableHtml;
+
+            } catch(e) { els.takhrijOutput.innerHTML = `<div class="p-4 text-red-500 text-xs">Gagal Takhrij: ${e.message}</div>`; }
+        }
+
+        window.viewLeft = (v) => {
+            ['viewOutline','viewSanad','viewTakhrij'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            document.getElementById('view'+v.charAt(0).toUpperCase()+v.slice(1)).classList.remove('hidden');
+            ['btnTabOutline','btnTabSanad','btnTabTakhrij'].forEach(id => document.getElementById(id).className = "flex-1 min-w-[90px] py-3 text-xs font-medium text-slate-500 hover:text-emerald-700");
+            document.getElementById('btnTab'+v.charAt(0).toUpperCase()+v.slice(1)).className = "flex-1 min-w-[90px] py-3 text-xs font-bold text-emerald-700 border-b-2 border-emerald-700 bg-white";
+        }
+
+        window.switchTab = (t) => {
+            document.getElementById('listKitabContainer').classList.add('hidden');
+            document.getElementById('listJurnalContainer').classList.add('hidden');
+            document.getElementById('listBukuContainer').classList.add('hidden');
+            ['kitab','jurnal','buku'].forEach(x => {
+                document.getElementById('tab'+x.charAt(0).toUpperCase()+x.slice(1)).className = "flex-1 min-w-[70px] py-3 text-xs font-medium text-slate-500 hover:text-emerald-600 transition";
+            });
+            document.getElementById('list'+t.charAt(0).toUpperCase()+t.slice(1)+'Container').classList.remove('hidden');
+            document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).className = "flex-1 min-w-[70px] py-3 text-xs font-bold text-emerald-600 border-b-2 border-emerald-600 bg-white transition";
+            document.getElementById('kitabFilterBar').classList.toggle('hidden', t !== 'kitab');
+        }
+
+        async function generateOutline(topic, apiKey) {
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: `Buat outline artikel jurnal (Bahasa Indonesia) topik: "${topic}". Format Markdown.` }] }] })
+                });
+                const data = await res.json();
+                let md = marked.parse(data
