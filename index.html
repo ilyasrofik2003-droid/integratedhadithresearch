@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
+    <meta name="google-site-verification" content="ZQk0tyMiCZ7533lLq8KFiSMvveqqCOUzRutTkEPLjQ8" />
     <title>Dahlan Scholar - Riset Hadis & Jurnal Islam Berbasis AI</title>
     
     <meta name="description" content="Aplikasi riset hadis & jurnal Islam berbasis AI. Fitur Takhrij otomatis, Pohon Sanad, dan pencarian referensi Kitab/Jurnal terintegrasi untuk mahasiswa dan peneliti.">
@@ -16,6 +17,7 @@
     <meta property="og:title" content="Dahlan Scholar - Riset Hadis & Jurnal AI">
     <meta property="og:description" content="Temukan sanad lengkap, takhrij otomatis, dan referensi jurnal ilmiah dalam satu klik.">
     <meta property="og:type" content="website">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
@@ -570,4 +572,101 @@
                     method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: `Buat outline artikel jurnal (Bahasa Indonesia) topik: "${topic}". Format Markdown.` }] }] })
                 });
                 const data = await res.json();
-                let md = marked.parse(data
+                let md = marked.parse(data.candidates[0].content.parts[0].text);
+                md = md.replace(/<\/li>/g, ' <button class="ref-btn" onclick="searchRef(this)"><i class="fa-solid fa-search"></i> Cari Ref</button></li>');
+                els.outlineContainer.innerHTML = md;
+            } catch(e) { els.outlineContainer.innerHTML = "Gagal memuat kerangka."; }
+        }
+
+        window.searchRef = (btn) => {
+            let txt = btn.parentElement.innerText.replace('Cari Ref', '').trim().substring(0,80);
+            searchState.topic = txt;
+            searchState.kitab.s = 1; searchState.jurnal.s = 1; searchState.buku.s = 1;
+            ['listKitab','listJurnal','listBuku'].forEach(id => {
+                document.getElementById(id).innerHTML = '<div class="p-4 text-center text-xs text-slate-400"><i class="fa-solid fa-circle-notch fa-spin"></i> Memuat referensi baru...</div>';
+                document.getElementById('btnMore'+id.replace('list','')).classList.add('hidden');
+            });
+            translateAndSearch(txt, getKeys()); 
+            executeSearch('jurnal', getKeys(), true);
+            executeSearch('buku', getKeys(), true);
+            switchTab('jurnal');
+        }
+
+        async function translateAndSearch(topic, keys) {
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${keys.gemini}`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: `Translate to Arabic keyword ONLY (No explanation): "${topic}".` }] }] })
+                });
+                const data = await res.json();
+                let kw = data.candidates[0].content.parts[0].text.replace(/[^\u0600-\u06FF\s]/g, '').trim();
+                searchState.arabKeyword = kw; els.arabKeywordDisplay.innerText = kw; els.arabKeywordDisplay.classList.remove('hidden');
+                executeSearch('kitab', keys, true);
+            } catch(e) {}
+        }
+
+        window.refreshKitab = () => { searchState.kitab.s=1; document.getElementById('listKitab').innerHTML=""; executeSearch('kitab', getKeys(), true); }
+        window.loadMore = (t) => executeSearch(t, getKeys(), false);
+
+        // --- REVISI UTAMA: PENAJAMAN TAGGING & PENCARIAN ---
+        function determineRelevance(title, snippet, isArab) {
+            const t = (title + " " + snippet).toLowerCase();
+
+            if (isArab) {
+                // Kategori Kitab
+                if (t.match(/تخريج|رواية|طرق/)) return {l:"Takhrij/Sanad", c:"bg-amber-100 text-amber-800"};
+                if (t.match(/صحيح|ضعيف|حسن|علل|نقد/)) return {l:"Derajat/Ilal", c:"bg-red-100 text-red-800"}; 
+                if (t.match(/شرح|تفسير|معنى|بيان/)) return {l:"Syarah/Tafsir", c:"bg-emerald-100 text-emerald-800"}; 
+                if (t.match(/فقه|حكم|مسألة|فتوى/)) return {l:"Hukum Fiqih", c:"bg-blue-100 text-blue-800"};
+                if (t.match(/عقيدة|توحيد|إيمان/)) return {l:"Aqidah", c:"bg-purple-100 text-purple-800"};
+                return {l:"Matan/Nash", c:"bg-slate-100 text-slate-600"}; // Default jadi Matan
+            } else {
+                // Kategori Jurnal/Buku (Lebih Tajam)
+                if (t.match(/metod|pendekatan|jenis penelitian|kualitatif|kuantitatif/)) return {l:"Metodologi", c:"bg-purple-100 text-purple-800"};
+                if (t.match(/latar|sejarah|definisi|pengertian|konsep|teori|landasan/)) return {l:"Pendahuluan/Teori", c:"bg-orange-100 text-orange-800"};
+                if (t.match(/hasil|pembahasan|analisis|perspektif|implikasi|pengaruh|hubungan|peran/)) return {l:"Pembahasan Utama", c:"bg-emerald-100 text-emerald-800"};
+                if (t.match(/kesimpulan|saran|penutup/)) return {l:"Penutup", c:"bg-pink-100 text-pink-800"};
+                if (t.match(/studi kasus|implementasi|penerapan|aplikasi/)) return {l:"Studi Kasus", c:"bg-cyan-100 text-cyan-800"};
+                if (t.match(/tinjauan|pustaka|literature/)) return {l:"Tinjauan Pustaka", c:"bg-indigo-100 text-indigo-800"};
+                return {l:"Referensi Umum", c:"bg-slate-100 text-slate-500"};
+            }
+        }
+
+        async function executeSearch(type, keys, reset) {
+            let q = "", start = 1, list = document.getElementById('list'+type.charAt(0).toUpperCase()+type.slice(1));
+            
+            // SMART QUERY LOGIC
+            const isLongTopic = searchState.topic.length > 20; 
+            
+            if(type==='kitab') { 
+                q = `${searchState.arabKeyword} site:dorar.net OR site:shamela.ws`; 
+                start = searchState.kitab.s; 
+            } else if(type==='jurnal') { 
+                // Jika topik panjang, paksa cari yang ada analisis/studinya
+                let suffix = isLongTopic ? ' AND ("analisis" OR "studi" OR "perspektif" OR "pengaruh")' : '';
+                q = `${searchState.topic} "jurnal" ${suffix} filetype:pdf`; 
+                start = searchState.jurnal.s; 
+            } else { 
+                // Buku juga dipertajam
+                let suffix = isLongTopic ? ' AND ("teori" OR "konsep" OR "pengantar")' : '';
+                q = `${searchState.topic} "buku" ${suffix} filetype:pdf`; 
+                start = searchState.buku.s; 
+            }
+            
+            const url = `https://www.googleapis.com/customsearch/v1?key=${keys.google}&cx=${keys.cx}&q=${encodeURIComponent(q)}&num=10&start=${start}`;
+            try {
+                const res = await fetch(url); const data = await res.json();
+                if(reset) list.innerHTML = "";
+                if(data.items) {
+                    data.items.forEach(i => {
+                        let isArab = type==='kitab';
+                        let tag = determineRelevance(i.title, i.snippet, isArab);
+                        list.insertAdjacentHTML('beforeend', `<div class="p-3 border-b hover:bg-slate-50"><span class="text-[10px] px-2 rounded ${tag.c} font-bold mr-1">${tag.l}</span><a href="${i.link}" target="_blank" class="block font-bold text-sm text-slate-800 hover:text-emerald-600 mt-1 ${isArab?'text-right font-amiri':''}">${i.title}</a><p class="text-xs text-slate-500 line-clamp-2 ${isArab?'text-right':''}">${i.snippet}</p></div>`);
+                    });
+                    document.getElementById('btnMore'+type.charAt(0).toUpperCase()+type.slice(1)).classList.remove('hidden');
+                    if(type==='kitab') searchState.kitab.s+=10; else if(type==='jurnal') searchState.jurnal.s+=10; else searchState.buku.s+=10;
+                } else if(reset) list.innerHTML = '<div class="p-4 text-center text-xs text-slate-400">Tidak ada hasil.</div>';
+            } catch(e) { if(reset) list.innerHTML = `<div class="text-red-500 text-xs p-2">${e.message}</div>`; }
+        }
+    </script>
+</body>
+</html>
